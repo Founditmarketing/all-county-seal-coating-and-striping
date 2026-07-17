@@ -1248,5 +1248,62 @@ const modulaMetaVars = [];
 </script>
 <script id="modula-js" src="/wp-content/plugins/modula-best-grid-gallery/assets/js/front/jquery-modula.min.js"></script>
 	
-	</body>
+	
+<!-- fi-contact-success-handler: Cancels the native POST (which 405s on static hosting) and shows an inline thank-you.
+     The CRM lead-capture.js submit listener runs in the capture phase and has already sent the lead
+     by the time this bubble-phase handler fires, so email delivery is unaffected. -->
+<style id="fi-contact-success-handler-style">
+.fi-form-msg-success{padding:16px 22px;margin:0;background:#eaf7ea;border:1px solid #4f9d4f;border-radius:4px;color:#1e6b1e;font-size:16px;line-height:1.5;}
+.fi-form-msg-error{padding:12px 18px;margin:0;background:#fdeaea;border:1px solid #d9534f;border-radius:4px;color:#a94442;font-size:15px;line-height:1.5;}
+.et_pb_contact_form .et_contact_error{border-color:#d9534f !important;}
+</style>
+<script id="fi-contact-success-handler">
+(function () {
+  function emailOk(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form || !form.classList || !form.classList.contains('et_pb_contact_form')) return;
+
+    var container = form.closest('.et_pb_contact_form_container') || form.parentNode;
+    var msg = container ? container.querySelector('.et-pb-contact-message') : null;
+
+    // Validate the fields Divi marked as required.
+    var invalid = [];
+    var fields = form.querySelectorAll('input.input, textarea.et_pb_contact_message');
+    Array.prototype.forEach.call(fields, function (el) {
+      var required = el.getAttribute('data-required_mark') === 'required';
+      var val = (el.value || '').trim();
+      el.classList.remove('et_contact_error');
+      if (required && !val) { invalid.push(el); el.classList.add('et_contact_error'); return; }
+      if (val && el.getAttribute('data-field_type') === 'email' && !emailOk(val)) {
+        invalid.push(el); el.classList.add('et_contact_error');
+      }
+    });
+
+    // Always stop the native POST so the visitor never lands on the 405 page.
+    e.preventDefault();
+
+    if (invalid.length) {
+      if (msg) {
+        msg.innerHTML = '<p class="fi-form-msg-error">Please fill in all required fields with a valid email address.</p>';
+        msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      invalid[0].focus();
+      return;
+    }
+
+    // Valid submission. The CRM capture-phase listener already serialized and sent the lead.
+    var contact = form.closest('.et_pb_contact') || form.parentNode;
+    if (contact) contact.style.display = 'none';
+    if (msg) {
+      msg.innerHTML = '<p class="fi-form-msg-success">Thank you! Your message has been sent — we\u2019ll be in touch shortly.</p>';
+      msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    try { form.reset(); } catch (err) {}
+  }, false);
+})();
+</script>
+
+</body>
 </html>
